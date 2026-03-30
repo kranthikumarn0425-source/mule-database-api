@@ -1,9 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="05f7e9c5-5c71-44e4-bf4b-10f59cc9d44e" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="cd7b3f4d-cd30-4951-8bd0-098b31965115" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="product_db" />
+	</db:config>
+	<db:config name="Database_Config1" doc:name="Database Config" doc:id="ae7b30c5-a6f2-4183-9972-3e7469ac84c5" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="order_db" />
+	</db:config>
+	<http:request-config name="HTTP_Request_config" doc:name="HTTP Request config" doc:id="801ffd95-4d06-4500-abab-1621a5657953" >
+		<http:request-connection host="localhost" port="8083" />
+	</http:request-config>
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="772b6db3-d4c6-4889-b450-73d8d240cd22" />
+	<sub-flow name="getdatafromDB" doc:id="2d7cb0bd-bc68-4c2d-a242-971c2de8b6e2" >
+		<!-- [STUDIO:"get products"]<db:stored-procedure doc:name="get products" doc:id="5590c7e7-42d6-4fdb-a291-a18f15b615d7" config-ref="Database_Config" target="products">
+			<db:sql ><![CDATA[{ call get_all_products() }&#93;&#93;></db:sql>
+		</db:stored-procedure> [STUDIO] -->
+		<db:stored-procedure doc:name="get products based on last created" doc:id="7ec29782-4392-41a5-acdd-01f2456f9c7c" config-ref="Database_Config">
+			<db:sql ><![CDATA[{CALL get_products_createdate(:inputdate)}]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+inputdate : payload
+}]]]></db:input-parameters>
+		</db:stored-procedure>
+		<!-- [STUDIO:"get orders"]<db:stored-procedure doc:name="get orders" doc:id="f796c7e3-e6eb-464c-8b6c-7447689a69af" config-ref="Database_Config1" target="orders">
+			<db:sql ><![CDATA[{ call get_all_orders() }&#93;&#93;></db:sql>
+		</db:stored-procedure> [STUDIO] -->
+	</sub-flow>
 	<flow name="mule-databases-apiFlow" doc:id="a8802b56-2150-4570-8ad1-fa042ae20502" >
-		<logger level="INFO" doc:name="Logger" doc:id="40d18a59-028d-4b3b-9c13-11574dd0af1f" />
+		<http:listener doc:name="Listener" doc:id="73e92270-a264-48d2-9caa-a6eb0659ed76" config-ref="HTTP_Listener_config" path="/database"/>
+		<logger level="INFO" doc:name="Input payload" doc:id="9a928aef-576c-4232-af49-39cb8672cd76" message="***********Input payload**************"/>
+		<logger level="INFO" doc:name="Input payload" doc:id="40d18a59-028d-4b3b-9c13-11574dd0af1f" message='#[payload]'/>
+		<os:retrieve doc:name="Retrieve" doc:id="178b0a06-49ea-4834-9071-671620c6d2c8" key="Lastupdated_id" objectStore="Object_store">
+			<os:default-value ><![CDATA["2026-02-01 19:13:25"]]></os:default-value>
+		</os:retrieve>
+		<choice doc:name="Choice" doc:id="20a161c1-a265-4233-964a-22f804c84281" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<flow-ref doc:name="getdatafromDB" doc:id="c1d6bb04-55c7-471f-b0de-bd5730041cc0" name="getdatafromDB" />
+				<logger level="INFO" doc:name="Afetr getting responses from DB" doc:id="c12b4427-13e9-4a35-b2f2-61f959e257d3" message="Afetr getting responses from DB" />
+				<logger level="INFO" doc:name="Logger" doc:id="afd2a2c1-cd83-4279-ab3d-2c4c276d27b1" message="#[%dw 2.0&#10;output application/json&#10;---&#10;vars.products.resultSet1 ++ vars.orders.resultSet1]" />
+				<ee:transform doc:name="Transform Message" doc:id="aebb7672-2bba-49a6-86d0-ab1bc19ddfc9">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="products"><![CDATA[%dw 2.0
+output application/json
+---
+vars.products.resultSet1 default []]]></ee:set-variable>
+				<ee:set-variable variableName="orders"><![CDATA[%dw 2.0
+output application/json
+---
+vars.orders.resultSet1 default []]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+				<!-- [STUDIO:"Transform Message"]<ee:transform doc:name="Transform Message" doc:id="0db971d0-84b4-4c88-9f32-aa2dcf485ec8">
+			<ee:message>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="orders" ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+vars.orders.resultSet1 default [&#93;&#93;&#93;></ee:set-variable>
+			</ee:variables>
+		</ee:transform> [STUDIO] -->
+				<os:store doc:name="Store" doc:id="5a379d0b-2323-499c-851f-051e245978ab" key="Lastupdated_id" objectStore="Object_store">
+					<os:value ><![CDATA[#[%dw 2.0
+output application/json
+---
+(payload orderBy $.created_at)[0]]]]></os:value>
+				</os:store>
+				<try doc:name="Try" doc:id="8aeb4577-40ee-4608-9a9e-0aae68070d29">
+			<until-successful maxRetries="5" doc:name="Until Successful" doc:id="d6992417-5ba7-446d-8dd8-96321cebfe86" millisBetweenRetries="6000">
+				<http:request doc:name="Request" doc:id="6367873f-f064-4123-af55-43f67f033f14" config-ref="HTTP_Request_config" method="POST" path="/sys">
+					<http:body><![CDATA[#[vars.products]]]></http:body>
+				</http:request>
+			</until-successful>
+			<error-handler>
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="02bdfe67-e4a1-40a2-a61e-d9e2425f6fe8" type="HTTP:CONNECTIVITY, HTTP:SERVICE_UNAVAILABLE, HTTP:TIMEOUT">
+					<logger level="INFO" doc:name="Logger" doc:id="068bc922-8966-4b1d-a767-0593b1edfadb" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"message" : "common errors"&#10;}]' />
+				</on-error-continue>
+				<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4ec377da-72e1-482f-b8f4-f18cc5abedd2" type="HTTP:BAD_REQUEST, HTTP:UNAUTHORIZED">
+					<logger level="INFO" doc:name="Logger" doc:id="d1a919b4-074f-44fd-bf50-2371303b0017" message='#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	"message" : "business errors"&#10;}]' />
+				</on-error-propagate>
+			</error-handler>
+		</try>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="99c210c5-1321-44a4-8051-2d6e598bac6f" message='#[output application/json&#10;---&#10;{ "message" : "No payload to process" }]'/>
+			</otherwise>
+		</choice>
 	</flow>
 </mule>
