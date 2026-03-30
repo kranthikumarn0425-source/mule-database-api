@@ -10,9 +10,6 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="05f7e9c5-5c71-44e4-bf4b-10f59cc9d44e" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
-	<db:config name="Database_Config" doc:name="Database Config" doc:id="cd7b3f4d-cd30-4951-8bd0-098b31965115" >
-		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="product_db" />
-	</db:config>
 	<db:config name="Database_Config1" doc:name="Database Config" doc:id="ae7b30c5-a6f2-4183-9972-3e7469ac84c5" >
 		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="order_db" />
 	</db:config>
@@ -24,7 +21,7 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 		<!-- [STUDIO:"get products"]<db:stored-procedure doc:name="get products" doc:id="5590c7e7-42d6-4fdb-a291-a18f15b615d7" config-ref="Database_Config" target="products">
 			<db:sql ><![CDATA[{ call get_all_products() }&#93;&#93;></db:sql>
 		</db:stored-procedure> [STUDIO] -->
-		<db:stored-procedure doc:name="get products based on last created" doc:id="7ec29782-4392-41a5-acdd-01f2456f9c7c" config-ref="Database_Config">
+		<db:stored-procedure doc:name="get products based on last created" doc:id="7ec29782-4392-41a5-acdd-01f2456f9c7c" config-ref="Database_Config1">
 			<db:sql ><![CDATA[{CALL get_products_createdate(:inputdate)}]]></db:sql>
 			<db:input-parameters ><![CDATA[#[{
 inputdate : payload
